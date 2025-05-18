@@ -1,0 +1,5 @@
+streamlit==1.34.0        # Web UI
+openai>=1.14.1           # GPT-4o / GPT-4o-mini
+anthropic>=0.24.0        # Claude 3
+google-generativeai>=0.5.2  # Gemini 1.5
+pydantic>=1.10           # 型検証（将来の拡張用）
