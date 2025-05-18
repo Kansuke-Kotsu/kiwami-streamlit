@@ -37,19 +37,20 @@ with st.sidebar:
     st.header("📝 商品情報 & パラメータ")
 
     product_name = st.text_input("商品名", "雲ごこちプレミアムピロー")
-    problem = st.text_area("悩み・課題", "首こりで熟睡できない")
-    promise = st.text_area("解決後のベネフィット", "ホテル級の深睡眠")
-    audience_age = st.text_input("ターゲット年齢", "30-50")
-    duration_sec = st.slider("動画尺 (秒)", 30, 300, 300, step=30)
-
+    problem = st.text_input("悩み・課題", "首こりで熟睡できない")
+    promise = st.text_input("解決後のベネフィット、アピールポイント", "ホテル級の深睡眠")
+    
     tones = st.multiselect(
         "動画トーン",
         ["コミカル", "サイエンス", "ASMR", "ドラマ", "インタビュー"],
         default=["コミカル"],
     )
+    
+    duration_sec = st.slider("動画尺 (秒)", 30, 300, 300, step=30)
     offer_price = st.text_input("価格訴求 (例: 5,900円)", "5,900円")
-    n_variations = st.slider("生成バリエーション数", 1, 5, 1)
-    temperature = st.slider("Temperature", 0.0, 1.5, 0.9, 0.1)
+    audience_age = st.text_input("ターゲット年齢", "30-50")
+    n_variations = st.slider("生成する広告案数", 1, 5, 1)
+    temperature = st.slider("Temperature: AIの自由度(大きいほどランダム性が高い)", 0.0, 1.5, 0.9, 0.1)
 
     generate_btn = st.button("台本を生成")
 
