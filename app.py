@@ -47,7 +47,7 @@ with st.sidebar:
     )
     
     duration_sec = st.slider("動画尺 (秒)", 30, 300, 300, step=30)
-    offer_price = st.text_input("価格訴求 (例: 5,900円)", "5,900円")
+    #offer_price = st.text_input("価格訴求 (例: 5,900円)", "5,900円")
     audience_age = st.text_input("ターゲット年齢", "30-50")
     n_variations = st.slider("生成する広告案数", 1, 5, 1)
     temperature = st.slider("Temperature: AIの自由度(大きいほどランダム性が高い)", 0.0, 1.5, 0.9, 0.1)
@@ -65,9 +65,12 @@ def build_request_dict() -> Dict[str, Any]:
         "tone": tones,
         "audience_age": audience_age,
         "duration_sec": duration_sec,
-        "offer_price": offer_price,
+        #"offer_price": offer_price,
         "n_variations": n_variations,
         "temperature": temperature,
+        "serif_only": True,  # デフォルトでセリフのみ
+        "with_timing": False,  # タイムコード付き
+        "with_direction": False,  # 演出注釈なし
     }
 
 if generate_btn:

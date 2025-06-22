@@ -2,6 +2,9 @@ import os
 from typing import List, Dict, Any
 
 import anthropic
+import tiktoken
+# "prompt_utils.pyからテンプレートをインポート"
+from prompt_utils import build_prompt
 
 # ────────────────────────────────────────────────────────────────────────────
 # Anthropic Claude 3.x – 広告台本生成モジュール
@@ -16,30 +19,14 @@ _client = anthropic.Anthropic(api_key=_ANTHROPIC_API_KEY)
 # デフォルトモデル（環境変数で上書き可）
 _MODEL_NAME = os.getenv("CLAUDE_MODEL", "claude-3-5-haiku-latest")
 
-_SYSTEM_PROMPT = (
-    "あなたはバズる動画広告台本のプロコピーライターです。"
-    "Hook→Problem→Solution→Offer→CTA の 5 段構成を守り、"
-    "指定のトーン・尺でテンポの良い日本語台本を生成してください。"
-)
-
-
-def _build_user_prompt(req: Dict[str, Any]) -> str:
-    """OpenAI / Gemini と同フォーマットでユーザープロンプトを構築"""
-    return (
-        f"商品名: {req['product_name']}\n"
-        f"悩み: {req['problem']}\n"
-        f"約束: {req['promise']}\n"
-        f"トーン候補: {', '.join(req['tone'])}\n"
-        f"ターゲット年齢: {req['audience_age']}\n"
-        f"尺(秒): {req['duration_sec']}\n"
-        f"価格訴求: {req['offer_price']}\n"
-        f"バリエーション数: {req['n_variations']}"
-    )
-
-
 # ────────────────────────────────────────────────────────────────────────────
 # Public API
 # ────────────────────────────────────────────────────────────────────────────
+
+def _count_tokens(text: str, model: str) -> int:
+    """指定モデルでのトークン数をカウント"""
+    enc = tiktoken.get_encoding("cl100k_base")
+    return len(enc.encode(text))
 
 def _extract_text_from_message(message_obj: anthropic.types.Message) -> str:
     """Message.content は TextBlock のリスト。すべて結合して 1 文字列へ"""
@@ -74,21 +61,44 @@ def generate_ad_claude(req: Dict[str, Any]) -> List[str]:
 
     n_variations: int = int(req.get("n_variations", 1))
     temperature: float = float(req.get("temperature", 0.9))
+    duration_sec = int(req.get("duration_sec", 30))
+    min_tokens = int(duration_sec * 8)  # 1秒あたり8文字を目安に計算
 
-    user_prompt = _build_user_prompt(req)
+    # プロンプト組み立て
+    prompt_text = build_prompt(req)
 
     scripts: List[str] = []
     for _ in range(n_variations):
         message = _client.messages.create(
             model=_MODEL_NAME,
-            max_tokens=1024,
+            max_tokens=4096,
             temperature=temperature,
-            system=_SYSTEM_PROMPT,
             messages=[
-                {"role": "user", "content": user_prompt},
+                {"role": "user", "content": prompt_text},
             ],
         )
+        
+        text = _extract_text_from_message(message)
+        # 生成された台本のトークン数をカウント
+        tokens = _count_tokens(text, _MODEL_NAME)
 
-        scripts.append(_extract_text_from_message(message))
+        if tokens < min_tokens:
+            refine_instructions = (
+                f"あなたは動画広告のプロコピーライターです。"
+                f"以下の台本を添削して、より再生回数が増えるような台本にしてください。"
+                f"また、{min_tokens}文字以上になるように、内容を増やしてください。"
+                f"出力は、添削後の台本のみを返してください。\n\n"
+                f"１分ごとに改行してください。\n\n"
+            )
+            refine_prompt = f"{refine_instructions}\n\n{text}"  # 元文 + 指示
+            refine_message = _client.messages.create(
+                model=_MODEL_NAME,
+                max_tokens=4096,
+                temperature=temperature,
+                messages=[
+                    {"role": "user", "content": refine_prompt},
+                ],
+            )
+            scripts.append(_extract_text_from_message(refine_message))
 
     return scripts
